@@ -22,30 +22,51 @@ namespace Examen3_ServiciosWeb.Clases
         {
             try
             {
-                // Buscar estudiante con usuario y clave exactos
+                // Verificar si el usuario existe en la base de datos
                 var estudiante = dbExamen.Estudiantes
-                    .FirstOrDefault(e => e.Usuario == login.Usuario && e.Clave == login.Clave);
+                    .FirstOrDefault(e => e.Usuario == login.Usuario);
 
                 if (estudiante == null)
                 {
+                    // Usuario no encontrado
                     loginRespuesta.Autenticado = false;
-                    loginRespuesta.Mensaje = "Usuario o clave incorrectos";
+                    loginRespuesta.Mensaje = "Usuario incorrecto";
+                    return new List<LoginRespuesta> { loginRespuesta }.AsQueryable();
+                }
+
+                // Verificar si la contraseña es correcta
+                if (estudiante.Clave != login.Clave)
+                {
+                    // Contraseña incorrecta
+                    loginRespuesta.Autenticado = false;
+                    loginRespuesta.Mensaje = "Contraseña incorrecta";
+                    return new List<LoginRespuesta> { loginRespuesta }.AsQueryable();
+                }
+
+                // Verificar si el usuario tiene matrícula
+                bool tieneMatricula = dbExamen.Matriculas
+                    .Any(m => m.idEstudiante == estudiante.idEstudiante);
+
+                if (!tieneMatricula)
+                {
+                    loginRespuesta.Autenticado = false;
+                    loginRespuesta.Mensaje = "El estudiante no tiene matrículas registradas";
                     return new List<LoginRespuesta> { loginRespuesta }.AsQueryable();
                 }
 
                 // Generar token si el usuario es válido
                 string token = TokenGenerator.GenerateTokenJwt(estudiante.Usuario);
 
+                // Respuesta exitosa
                 return new List<LoginRespuesta>
                 {
                     new LoginRespuesta
                     {
                         Usuario = estudiante.Usuario,
                         Autenticado = true,
-                        Perfil = "Estudiante", 
+                        Perfil = "Estudiante",
                         PaginaInicio = "paginaEstudiante.html",
-                        Token = token,
-                        Mensaje = ""
+                        Token = token
                     }
                 }.AsQueryable();
             }
